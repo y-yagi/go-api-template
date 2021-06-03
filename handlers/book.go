@@ -10,7 +10,7 @@ import (
 )
 
 func GetBooks(c *fiber.Ctx) error {
-	books, err := database.Client.Book.Query().All(c.UserContext())
+	books, err := database.Client.Book.Query().Order(ent.Asc(book.FieldID)).All(c.UserContext())
 	if err != nil {
 		return err
 	}
