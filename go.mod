@@ -5,5 +5,5 @@ go 1.16
 require (
 	entgo.io/ent v0.8.0
 	github.com/gofiber/fiber/v2 v2.11.0
-	github.com/lib/pq v1.10.2
+	github.com/jackc/pgx/v4 v4.11.0
 )

@@ -2,13 +2,16 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 
+	"entgo.io/ent/dialect"
 	"github.com/y-yagi/go-api-template/ent"
 	"github.com/y-yagi/go-api-template/ent/migrate"
 
-	_ "github.com/lib/pq"
+	entsql "entgo.io/ent/dialect/sql"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 var (
@@ -16,12 +19,14 @@ var (
 )
 
 func New() error {
-	var err error
-
-	Client, err = ent.Open("postgres", os.Getenv("DATABASE_URL"))
+	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
 	if err != nil {
-		return fmt.Errorf("failed connecting to DB: %v", err)
+		return err
 	}
+
+	drv := entsql.OpenDB(dialect.Postgres, db)
+	Client = ent.NewClient(ent.Driver(drv))
+
 	ctx := context.Background()
 
 	// Run migration.
