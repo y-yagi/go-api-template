@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  db:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/postgresql/Dockerfile
+      args:
+        - DB_LANG=ja_JP
+    volumes:
+      - db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "6432:5432"
+    networks:
+      - db
+
+networks:
+  db:
+    driver: bridge
+
+volumes:
+  db:
+    driver: local
