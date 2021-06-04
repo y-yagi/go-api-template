@@ -19,6 +19,7 @@ func New() *fiber.App {
 	api.Get("/books", handlers.GetBooks)
 	api.Get("/books/:id", handlers.GetBook)
 	api.Post("/books", handlers.CreateBook)
+	api.Patch("/books", handlers.UpdateBook)
 	api.Delete("/books/:id", handlers.DeleteBook)
 
 	return app

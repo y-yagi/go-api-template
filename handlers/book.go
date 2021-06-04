@@ -44,6 +44,20 @@ func CreateBook(c *fiber.Ctx) error {
 	return c.JSON(book)
 }
 
+func UpdateBook(c *fiber.Ctx) error {
+	book := new(ent.Book)
+	if err := c.BodyParser(&book); err != nil {
+		return err
+	}
+
+	_, err := database.Client.Book.UpdateOne(book).Save(c.UserContext())
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(book)
+}
+
 func DeleteBook(c *fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
