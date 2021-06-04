@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/y-yagi/go-api-template/ent/book"
@@ -19,6 +20,10 @@ type Book struct {
 	Name string `json:"name,omitempty"`
 	// Author holds the value of the "author" field.
 	Author string `json:"author,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -30,6 +35,8 @@ func (*Book) scanValues(columns []string) ([]interface{}, error) {
 			values[i] = new(sql.NullInt64)
 		case book.FieldName, book.FieldAuthor:
 			values[i] = new(sql.NullString)
+		case book.FieldCreatedAt, book.FieldUpdatedAt:
+			values[i] = new(sql.NullTime)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Book", columns[i])
 		}
@@ -63,6 +70,18 @@ func (b *Book) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				b.Author = value.String
 			}
+		case book.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				b.CreatedAt = value.Time
+			}
+		case book.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				b.UpdatedAt = value.Time
+			}
 		}
 	}
 	return nil
@@ -95,6 +114,10 @@ func (b *Book) String() string {
 	builder.WriteString(b.Name)
 	builder.WriteString(", author=")
 	builder.WriteString(b.Author)
+	builder.WriteString(", created_at=")
+	builder.WriteString(b.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", updated_at=")
+	builder.WriteString(b.UpdatedAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }
