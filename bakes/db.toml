@@ -1,0 +1,2 @@
+[dump_schema]
+command = ["docker-compose", "exec", "-T", "db", "pg_dump", "-U", "postgres", "-w", "go_api_example", "--schema-only", "--no-privileges", "--no-owner"]
