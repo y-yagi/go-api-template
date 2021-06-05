@@ -1,2 +1,9 @@
+[migrate]
+dependencies = ["run_migrater", "dump_schema"]
+
+[run_migrater]
+command = ["go", "run", "cmd/migrater/main.go"]
+environments = ["DATABASE_URL=postgres://postgres:changeme@localhost:6432/go_api_example?sslmode=disable"]
+
 [dump_schema]
 command = ["docker-compose", "exec", "-T", "db", "pg_dump", "-U", "postgres", "-w", "go_api_example", "--schema-only", "--no-privileges", "--no-owner"]
