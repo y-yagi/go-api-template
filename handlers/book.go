@@ -36,7 +36,7 @@ func CreateBook(c *fiber.Ctx) error {
 		return err
 	}
 
-	_, err := database.Client.Book.Create().SetName(book.Name).SetAuthor(book.Author).Save(c.UserContext())
+	_, err := database.Client.Book.Create().SetName(book.Name).Save(c.UserContext())
 	if err != nil {
 		return err
 	}

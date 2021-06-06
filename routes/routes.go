@@ -20,6 +20,11 @@ func New() *fiber.App {
 	}))
 
 	api := app.Group("/api")
+	api.Get("/authors", handlers.GetAuthors)
+	api.Get("/authors/:id", handlers.GetAuthor)
+	api.Post("/authors", handlers.CreateAuthor)
+	api.Patch("/authors", handlers.UpdateAuthor)
+	api.Delete("/authors/:id", handlers.DeleteAuthor)
 	api.Get("/books", handlers.GetBooks)
 	api.Get("/books/:id", handlers.GetBook)
 	api.Post("/books", handlers.CreateBook)
