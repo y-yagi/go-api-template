@@ -1,3 +1,15 @@
+[create]
+commands = [
+  ["docker-compose", "exec", "-T", "db", "createdb", "-U", "postgres", "go_api_example"],
+  ["docker-compose", "exec", "-T", "db", "createdb", "-U", "postgres", "go_api_example_test"],
+]
+
+[drop]
+commands = [
+  ["docker-compose", "exec", "-T", "db", "dropdb", "-U", "postgres", "go_api_example"],
+  ["docker-compose", "exec", "-T", "db", "dropdb", "-U", "postgres", "go_api_example_test"],
+]
+
 [migrate]
 dependencies = ["run_migrater", "dump_schema"]
 
