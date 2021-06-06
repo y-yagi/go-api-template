@@ -6,11 +6,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/y-yagi/go-api-template/database"
 	"github.com/y-yagi/go-api-template/ent"
+	"github.com/y-yagi/go-api-template/ent/author"
 	"github.com/y-yagi/go-api-template/ent/book"
 )
 
+type BookParam struct {
+	ID       int    `json:"id,omitempty"`
+	Name     string `json:"name,omitempty"`
+	AuthorID int    `json:"author_id,omitempty"`
+}
+
 func GetBooks(c *fiber.Ctx) error {
-	books, err := database.Client.Book.Query().Order(ent.Asc(book.FieldID)).All(c.UserContext())
+	books, err := database.Client.Book.Query().Order(ent.Asc(book.FieldID)).WithAuthor().All(c.UserContext())
 	if err != nil {
 		return err
 	}
@@ -23,7 +30,7 @@ func GetBook(c *fiber.Ctx) error {
 		return err
 	}
 
-	book, err := database.Client.Book.Query().Where(book.ID(id)).Only(c.UserContext())
+	book, err := database.Client.Book.Query().Where(book.ID(id)).WithAuthor().Only(c.UserContext())
 	if err != nil {
 		return err
 	}
@@ -31,12 +38,17 @@ func GetBook(c *fiber.Ctx) error {
 }
 
 func CreateBook(c *fiber.Ctx) error {
-	book := new(ent.Book)
-	if err := c.BodyParser(&book); err != nil {
+	params := new(BookParam)
+	if err := c.BodyParser(&params); err != nil {
 		return err
 	}
 
-	_, err := database.Client.Book.Create().SetName(book.Name).Save(c.UserContext())
+	author, err := database.Client.Author.Query().Where(author.ID(params.AuthorID)).Only(c.UserContext())
+	if err != nil {
+		return err
+	}
+
+	book, err := database.Client.Book.Create().SetName(params.Name).AddAuthor(author).Save(c.UserContext())
 	if err != nil {
 		return err
 	}
@@ -45,12 +57,12 @@ func CreateBook(c *fiber.Ctx) error {
 }
 
 func UpdateBook(c *fiber.Ctx) error {
-	book := new(ent.Book)
-	if err := c.BodyParser(&book); err != nil {
+	params := new(BookParam)
+	if err := c.BodyParser(&params); err != nil {
 		return err
 	}
 
-	_, err := database.Client.Book.UpdateOne(book).Save(c.UserContext())
+	book, err := database.Client.Book.UpdateOneID(params.ID).SetName(params.Name).Save(c.UserContext())
 	if err != nil {
 		return err
 	}
