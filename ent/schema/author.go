@@ -8,13 +8,13 @@ import (
 	"entgo.io/ent/schema/field"
 )
 
-// Book holds the schema definition for the Book entity.
-type Book struct {
+// Author holds the schema definition for the Author entity.
+type Author struct {
 	ent.Schema
 }
 
-// Fields of the Book.
-func (Book) Fields() []ent.Field {
+// Fields of the Author.
+func (Author) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name"),
 		field.Time("created_at").
@@ -26,10 +26,9 @@ func (Book) Fields() []ent.Field {
 	}
 }
 
-// Edges of the Book.
-func (Book) Edges() []ent.Edge {
+// Edges of the Author.
+func (Author) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("author", Author.Type).
-			Ref("books"),
+		edge.To("books", Book.Type),
 	}
 }

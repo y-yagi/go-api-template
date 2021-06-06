@@ -9,10 +9,12 @@ import (
 
 	"github.com/y-yagi/go-api-template/ent/migrate"
 
+	"github.com/y-yagi/go-api-template/ent/author"
 	"github.com/y-yagi/go-api-template/ent/book"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 // Client is the client that holds all ent builders.
@@ -20,6 +22,8 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Author is the client for interacting with the Author builders.
+	Author *AuthorClient
 	// Book is the client for interacting with the Book builders.
 	Book *BookClient
 }
@@ -35,6 +39,7 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Author = NewAuthorClient(c.config)
 	c.Book = NewBookClient(c.config)
 }
 
@@ -69,6 +74,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	return &Tx{
 		ctx:    ctx,
 		config: cfg,
+		Author: NewAuthorClient(cfg),
 		Book:   NewBookClient(cfg),
 	}, nil
 }
@@ -88,6 +94,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
 		config: cfg,
+		Author: NewAuthorClient(cfg),
 		Book:   NewBookClient(cfg),
 	}, nil
 }
@@ -95,7 +102,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Book.
+//		Author.
 //		Query().
 //		Count(ctx)
 //
@@ -118,7 +125,114 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.Author.Use(hooks...)
 	c.Book.Use(hooks...)
+}
+
+// AuthorClient is a client for the Author schema.
+type AuthorClient struct {
+	config
+}
+
+// NewAuthorClient returns a client for the Author from the given config.
+func NewAuthorClient(c config) *AuthorClient {
+	return &AuthorClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `author.Hooks(f(g(h())))`.
+func (c *AuthorClient) Use(hooks ...Hook) {
+	c.hooks.Author = append(c.hooks.Author, hooks...)
+}
+
+// Create returns a create builder for Author.
+func (c *AuthorClient) Create() *AuthorCreate {
+	mutation := newAuthorMutation(c.config, OpCreate)
+	return &AuthorCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Author entities.
+func (c *AuthorClient) CreateBulk(builders ...*AuthorCreate) *AuthorCreateBulk {
+	return &AuthorCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Author.
+func (c *AuthorClient) Update() *AuthorUpdate {
+	mutation := newAuthorMutation(c.config, OpUpdate)
+	return &AuthorUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AuthorClient) UpdateOne(a *Author) *AuthorUpdateOne {
+	mutation := newAuthorMutation(c.config, OpUpdateOne, withAuthor(a))
+	return &AuthorUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AuthorClient) UpdateOneID(id int) *AuthorUpdateOne {
+	mutation := newAuthorMutation(c.config, OpUpdateOne, withAuthorID(id))
+	return &AuthorUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Author.
+func (c *AuthorClient) Delete() *AuthorDelete {
+	mutation := newAuthorMutation(c.config, OpDelete)
+	return &AuthorDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *AuthorClient) DeleteOne(a *Author) *AuthorDeleteOne {
+	return c.DeleteOneID(a.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *AuthorClient) DeleteOneID(id int) *AuthorDeleteOne {
+	builder := c.Delete().Where(author.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AuthorDeleteOne{builder}
+}
+
+// Query returns a query builder for Author.
+func (c *AuthorClient) Query() *AuthorQuery {
+	return &AuthorQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Author entity by its id.
+func (c *AuthorClient) Get(ctx context.Context, id int) (*Author, error) {
+	return c.Query().Where(author.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AuthorClient) GetX(ctx context.Context, id int) *Author {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryBooks queries the books edge of a Author.
+func (c *AuthorClient) QueryBooks(a *Author) *BookQuery {
+	query := &BookQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := a.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(author.Table, author.FieldID, id),
+			sqlgraph.To(book.Table, book.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, author.BooksTable, author.BooksPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(a.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AuthorClient) Hooks() []Hook {
+	return c.hooks.Author
 }
 
 // BookClient is a client for the Book schema.
@@ -204,6 +318,22 @@ func (c *BookClient) GetX(ctx context.Context, id int) *Book {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryAuthor queries the author edge of a Book.
+func (c *BookClient) QueryAuthor(b *Book) *AuthorQuery {
+	query := &AuthorQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := b.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(book.Table, book.FieldID, id),
+			sqlgraph.To(author.Table, author.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, book.AuthorTable, book.AuthorPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(b.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.

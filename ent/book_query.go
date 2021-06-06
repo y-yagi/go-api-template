@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"math"
@@ -11,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/y-yagi/go-api-template/ent/author"
 	"github.com/y-yagi/go-api-template/ent/book"
 	"github.com/y-yagi/go-api-template/ent/predicate"
 )
@@ -24,6 +26,8 @@ type BookQuery struct {
 	order      []OrderFunc
 	fields     []string
 	predicates []predicate.Book
+	// eager-loading edges.
+	withAuthor *AuthorQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +62,28 @@ func (bq *BookQuery) Unique(unique bool) *BookQuery {
 func (bq *BookQuery) Order(o ...OrderFunc) *BookQuery {
 	bq.order = append(bq.order, o...)
 	return bq
+}
+
+// QueryAuthor chains the current query on the "author" edge.
+func (bq *BookQuery) QueryAuthor() *AuthorQuery {
+	query := &AuthorQuery{config: bq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := bq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := bq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(book.Table, book.FieldID, selector),
+			sqlgraph.To(author.Table, author.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, book.AuthorTable, book.AuthorPrimaryKey...),
+		)
+		fromU = sqlgraph.SetNeighbors(bq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Book entity from the query.
@@ -241,10 +267,22 @@ func (bq *BookQuery) Clone() *BookQuery {
 		offset:     bq.offset,
 		order:      append([]OrderFunc{}, bq.order...),
 		predicates: append([]predicate.Book{}, bq.predicates...),
+		withAuthor: bq.withAuthor.Clone(),
 		// clone intermediate query.
 		sql:  bq.sql.Clone(),
 		path: bq.path,
 	}
+}
+
+// WithAuthor tells the query-builder to eager-load the nodes that are connected to
+// the "author" edge. The optional arguments are used to configure the query builder of the edge.
+func (bq *BookQuery) WithAuthor(opts ...func(*AuthorQuery)) *BookQuery {
+	query := &AuthorQuery{config: bq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	bq.withAuthor = query
+	return bq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -310,8 +348,11 @@ func (bq *BookQuery) prepareQuery(ctx context.Context) error {
 
 func (bq *BookQuery) sqlAll(ctx context.Context) ([]*Book, error) {
 	var (
-		nodes = []*Book{}
-		_spec = bq.querySpec()
+		nodes       = []*Book{}
+		_spec       = bq.querySpec()
+		loadedTypes = [1]bool{
+			bq.withAuthor != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
 		node := &Book{config: bq.config}
@@ -323,6 +364,7 @@ func (bq *BookQuery) sqlAll(ctx context.Context) ([]*Book, error) {
 			return fmt.Errorf("ent: Assign called without calling ScanValues")
 		}
 		node := nodes[len(nodes)-1]
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	if err := sqlgraph.QueryNodes(ctx, bq.driver, _spec); err != nil {
@@ -331,6 +373,72 @@ func (bq *BookQuery) sqlAll(ctx context.Context) ([]*Book, error) {
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+
+	if query := bq.withAuthor; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		ids := make(map[int]*Book, len(nodes))
+		for _, node := range nodes {
+			ids[node.ID] = node
+			fks = append(fks, node.ID)
+			node.Edges.Author = []*Author{}
+		}
+		var (
+			edgeids []int
+			edges   = make(map[int][]*Book)
+		)
+		_spec := &sqlgraph.EdgeQuerySpec{
+			Edge: &sqlgraph.EdgeSpec{
+				Inverse: true,
+				Table:   book.AuthorTable,
+				Columns: book.AuthorPrimaryKey,
+			},
+			Predicate: func(s *sql.Selector) {
+				s.Where(sql.InValues(book.AuthorPrimaryKey[1], fks...))
+			},
+			ScanValues: func() [2]interface{} {
+				return [2]interface{}{&sql.NullInt64{}, &sql.NullInt64{}}
+			},
+			Assign: func(out, in interface{}) error {
+				eout, ok := out.(*sql.NullInt64)
+				if !ok || eout == nil {
+					return fmt.Errorf("unexpected id value for edge-out")
+				}
+				ein, ok := in.(*sql.NullInt64)
+				if !ok || ein == nil {
+					return fmt.Errorf("unexpected id value for edge-in")
+				}
+				outValue := int(eout.Int64)
+				inValue := int(ein.Int64)
+				node, ok := ids[outValue]
+				if !ok {
+					return fmt.Errorf("unexpected node id in edges: %v", outValue)
+				}
+				if _, ok := edges[inValue]; !ok {
+					edgeids = append(edgeids, inValue)
+				}
+				edges[inValue] = append(edges[inValue], node)
+				return nil
+			},
+		}
+		if err := sqlgraph.QueryEdges(ctx, bq.driver, _spec); err != nil {
+			return nil, fmt.Errorf(`query edges "author": %w`, err)
+		}
+		query.Where(author.IDIn(edgeids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := edges[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected "author" node returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.Author = append(nodes[i].Edges.Author, n)
+			}
+		}
+	}
+
 	return nodes, nil
 }
 

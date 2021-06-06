@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/y-yagi/go-api-template/ent/author"
 	"github.com/y-yagi/go-api-template/ent/book"
 	"github.com/y-yagi/go-api-template/ent/predicate"
 
@@ -23,8 +24,496 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeBook = "Book"
+	TypeAuthor = "Author"
+	TypeBook   = "Book"
 )
+
+// AuthorMutation represents an operation that mutates the Author nodes in the graph.
+type AuthorMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	name          *string
+	created_at    *time.Time
+	updated_at    *time.Time
+	clearedFields map[string]struct{}
+	books         map[int]struct{}
+	removedbooks  map[int]struct{}
+	clearedbooks  bool
+	done          bool
+	oldValue      func(context.Context) (*Author, error)
+	predicates    []predicate.Author
+}
+
+var _ ent.Mutation = (*AuthorMutation)(nil)
+
+// authorOption allows management of the mutation configuration using functional options.
+type authorOption func(*AuthorMutation)
+
+// newAuthorMutation creates new mutation for the Author entity.
+func newAuthorMutation(c config, op Op, opts ...authorOption) *AuthorMutation {
+	m := &AuthorMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeAuthor,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withAuthorID sets the ID field of the mutation.
+func withAuthorID(id int) authorOption {
+	return func(m *AuthorMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *Author
+		)
+		m.oldValue = func(ctx context.Context) (*Author, error) {
+			once.Do(func() {
+				if m.done {
+					err = fmt.Errorf("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().Author.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withAuthor sets the old Author of the mutation.
+func withAuthor(node *Author) authorOption {
+	return func(m *AuthorMutation) {
+		m.oldValue = func(context.Context) (*Author, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m AuthorMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m AuthorMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, fmt.Errorf("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID
+// is only available if it was provided to the builder.
+func (m *AuthorMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// SetName sets the "name" field.
+func (m *AuthorMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *AuthorMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the Author entity.
+// If the Author object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthorMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *AuthorMutation) ResetName() {
+	m.name = nil
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *AuthorMutation) SetCreatedAt(t time.Time) {
+	m.created_at = &t
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *AuthorMutation) CreatedAt() (r time.Time, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the Author entity.
+// If the Author object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthorMutation) OldCreatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *AuthorMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *AuthorMutation) SetUpdatedAt(t time.Time) {
+	m.updated_at = &t
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *AuthorMutation) UpdatedAt() (r time.Time, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the Author entity.
+// If the Author object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthorMutation) OldUpdatedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, fmt.Errorf("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, fmt.Errorf("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *AuthorMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// AddBookIDs adds the "books" edge to the Book entity by ids.
+func (m *AuthorMutation) AddBookIDs(ids ...int) {
+	if m.books == nil {
+		m.books = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.books[ids[i]] = struct{}{}
+	}
+}
+
+// ClearBooks clears the "books" edge to the Book entity.
+func (m *AuthorMutation) ClearBooks() {
+	m.clearedbooks = true
+}
+
+// BooksCleared reports if the "books" edge to the Book entity was cleared.
+func (m *AuthorMutation) BooksCleared() bool {
+	return m.clearedbooks
+}
+
+// RemoveBookIDs removes the "books" edge to the Book entity by IDs.
+func (m *AuthorMutation) RemoveBookIDs(ids ...int) {
+	if m.removedbooks == nil {
+		m.removedbooks = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.removedbooks[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedBooks returns the removed IDs of the "books" edge to the Book entity.
+func (m *AuthorMutation) RemovedBooksIDs() (ids []int) {
+	for id := range m.removedbooks {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// BooksIDs returns the "books" edge IDs in the mutation.
+func (m *AuthorMutation) BooksIDs() (ids []int) {
+	for id := range m.books {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetBooks resets all changes to the "books" edge.
+func (m *AuthorMutation) ResetBooks() {
+	m.books = nil
+	m.clearedbooks = false
+	m.removedbooks = nil
+}
+
+// Op returns the operation name.
+func (m *AuthorMutation) Op() Op {
+	return m.op
+}
+
+// Type returns the node type of this mutation (Author).
+func (m *AuthorMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *AuthorMutation) Fields() []string {
+	fields := make([]string, 0, 3)
+	if m.name != nil {
+		fields = append(fields, author.FieldName)
+	}
+	if m.created_at != nil {
+		fields = append(fields, author.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, author.FieldUpdatedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *AuthorMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case author.FieldName:
+		return m.Name()
+	case author.FieldCreatedAt:
+		return m.CreatedAt()
+	case author.FieldUpdatedAt:
+		return m.UpdatedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *AuthorMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case author.FieldName:
+		return m.OldName(ctx)
+	case author.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case author.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown Author field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AuthorMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case author.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case author.FieldCreatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case author.FieldUpdatedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown Author field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *AuthorMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *AuthorMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *AuthorMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Author numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *AuthorMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *AuthorMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *AuthorMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown Author nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *AuthorMutation) ResetField(name string) error {
+	switch name {
+	case author.FieldName:
+		m.ResetName()
+		return nil
+	case author.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case author.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown Author field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *AuthorMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.books != nil {
+		edges = append(edges, author.EdgeBooks)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *AuthorMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case author.EdgeBooks:
+		ids := make([]ent.Value, 0, len(m.books))
+		for id := range m.books {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *AuthorMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removedbooks != nil {
+		edges = append(edges, author.EdgeBooks)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *AuthorMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case author.EdgeBooks:
+		ids := make([]ent.Value, 0, len(m.removedbooks))
+		for id := range m.removedbooks {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *AuthorMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedbooks {
+		edges = append(edges, author.EdgeBooks)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *AuthorMutation) EdgeCleared(name string) bool {
+	switch name {
+	case author.EdgeBooks:
+		return m.clearedbooks
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *AuthorMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown Author unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *AuthorMutation) ResetEdge(name string) error {
+	switch name {
+	case author.EdgeBooks:
+		m.ResetBooks()
+		return nil
+	}
+	return fmt.Errorf("unknown Author edge %s", name)
+}
 
 // BookMutation represents an operation that mutates the Book nodes in the graph.
 type BookMutation struct {
@@ -33,10 +522,12 @@ type BookMutation struct {
 	typ           string
 	id            *int
 	name          *string
-	author        *string
 	created_at    *time.Time
 	updated_at    *time.Time
 	clearedFields map[string]struct{}
+	author        map[int]struct{}
+	removedauthor map[int]struct{}
+	clearedauthor bool
 	done          bool
 	oldValue      func(context.Context) (*Book, error)
 	predicates    []predicate.Book
@@ -157,42 +648,6 @@ func (m *BookMutation) ResetName() {
 	m.name = nil
 }
 
-// SetAuthor sets the "author" field.
-func (m *BookMutation) SetAuthor(s string) {
-	m.author = &s
-}
-
-// Author returns the value of the "author" field in the mutation.
-func (m *BookMutation) Author() (r string, exists bool) {
-	v := m.author
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAuthor returns the old "author" field's value of the Book entity.
-// If the Book object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BookMutation) OldAuthor(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, fmt.Errorf("OldAuthor is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, fmt.Errorf("OldAuthor requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAuthor: %w", err)
-	}
-	return oldValue.Author, nil
-}
-
-// ResetAuthor resets all changes to the "author" field.
-func (m *BookMutation) ResetAuthor() {
-	m.author = nil
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (m *BookMutation) SetCreatedAt(t time.Time) {
 	m.created_at = &t
@@ -265,6 +720,59 @@ func (m *BookMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
+// AddAuthorIDs adds the "author" edge to the Author entity by ids.
+func (m *BookMutation) AddAuthorIDs(ids ...int) {
+	if m.author == nil {
+		m.author = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.author[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAuthor clears the "author" edge to the Author entity.
+func (m *BookMutation) ClearAuthor() {
+	m.clearedauthor = true
+}
+
+// AuthorCleared reports if the "author" edge to the Author entity was cleared.
+func (m *BookMutation) AuthorCleared() bool {
+	return m.clearedauthor
+}
+
+// RemoveAuthorIDs removes the "author" edge to the Author entity by IDs.
+func (m *BookMutation) RemoveAuthorIDs(ids ...int) {
+	if m.removedauthor == nil {
+		m.removedauthor = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.removedauthor[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAuthor returns the removed IDs of the "author" edge to the Author entity.
+func (m *BookMutation) RemovedAuthorIDs() (ids []int) {
+	for id := range m.removedauthor {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AuthorIDs returns the "author" edge IDs in the mutation.
+func (m *BookMutation) AuthorIDs() (ids []int) {
+	for id := range m.author {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAuthor resets all changes to the "author" edge.
+func (m *BookMutation) ResetAuthor() {
+	m.author = nil
+	m.clearedauthor = false
+	m.removedauthor = nil
+}
+
 // Op returns the operation name.
 func (m *BookMutation) Op() Op {
 	return m.op
@@ -279,12 +787,9 @@ func (m *BookMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BookMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 3)
 	if m.name != nil {
 		fields = append(fields, book.FieldName)
-	}
-	if m.author != nil {
-		fields = append(fields, book.FieldAuthor)
 	}
 	if m.created_at != nil {
 		fields = append(fields, book.FieldCreatedAt)
@@ -302,8 +807,6 @@ func (m *BookMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case book.FieldName:
 		return m.Name()
-	case book.FieldAuthor:
-		return m.Author()
 	case book.FieldCreatedAt:
 		return m.CreatedAt()
 	case book.FieldUpdatedAt:
@@ -319,8 +822,6 @@ func (m *BookMutation) OldField(ctx context.Context, name string) (ent.Value, er
 	switch name {
 	case book.FieldName:
 		return m.OldName(ctx)
-	case book.FieldAuthor:
-		return m.OldAuthor(ctx)
 	case book.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case book.FieldUpdatedAt:
@@ -340,13 +841,6 @@ func (m *BookMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetName(v)
-		return nil
-	case book.FieldAuthor:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAuthor(v)
 		return nil
 	case book.FieldCreatedAt:
 		v, ok := value.(time.Time)
@@ -414,9 +908,6 @@ func (m *BookMutation) ResetField(name string) error {
 	case book.FieldName:
 		m.ResetName()
 		return nil
-	case book.FieldAuthor:
-		m.ResetAuthor()
-		return nil
 	case book.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -429,48 +920,84 @@ func (m *BookMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BookMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.author != nil {
+		edges = append(edges, book.EdgeAuthor)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *BookMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case book.EdgeAuthor:
+		ids := make([]ent.Value, 0, len(m.author))
+		for id := range m.author {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BookMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedauthor != nil {
+		edges = append(edges, book.EdgeAuthor)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *BookMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case book.EdgeAuthor:
+		ids := make([]ent.Value, 0, len(m.removedauthor))
+		for id := range m.removedauthor {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BookMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedauthor {
+		edges = append(edges, book.EdgeAuthor)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *BookMutation) EdgeCleared(name string) bool {
+	switch name {
+	case book.EdgeAuthor:
+		return m.clearedauthor
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *BookMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Book unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *BookMutation) ResetEdge(name string) error {
+	switch name {
+	case book.EdgeAuthor:
+		m.ResetAuthor()
+		return nil
+	}
 	return fmt.Errorf("unknown Book edge %s", name)
 }

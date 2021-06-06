@@ -9,6 +9,19 @@ import (
 	"github.com/y-yagi/go-api-template/ent"
 )
 
+// The AuthorFunc type is an adapter to allow the use of ordinary
+// function as Author mutator.
+type AuthorFunc func(context.Context, *ent.AuthorMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AuthorFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.AuthorMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AuthorMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The BookFunc type is an adapter to allow the use of ordinary
 // function as Book mutator.
 type BookFunc func(context.Context, *ent.BookMutation) (ent.Value, error)
