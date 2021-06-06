@@ -30,6 +30,7 @@ func (Book) Fields() []ent.Field {
 func (Book) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("author", Author.Type).
-			Ref("books"),
+			Ref("books").
+			Required(),
 	}
 }

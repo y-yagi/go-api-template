@@ -143,6 +143,9 @@ func (bc *BookCreate) check() error {
 	if _, ok := bc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New("ent: missing required field \"updated_at\"")}
 	}
+	if len(bc.mutation.AuthorIDs()) == 0 {
+		return &ValidationError{Name: "author", err: errors.New("ent: missing required edge \"author\"")}
+	}
 	return nil
 }
 
