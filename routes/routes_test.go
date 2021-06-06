@@ -16,6 +16,7 @@ import (
 )
 
 func removeTestData() {
+	database.Client.Author.Delete().ExecX(context.Background())
 	database.Client.Book.Delete().ExecX(context.Background())
 }
 
@@ -34,8 +35,9 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetBooks(t *testing.T) {
-	database.Client.Book.Create().SetName("GoBook").SetAuthor("Sam").Save(context.Background())
-	database.Client.Book.Create().SetName("JSBook").SetAuthor("Bob").Save(context.Background())
+	author := database.Client.Author.Create().SetName("Bob").SaveX(context.Background())
+	database.Client.Book.Create().SetName("GoBook").AddAuthor(author).SaveX(context.Background())
+	database.Client.Book.Create().SetName("JSBook").AddAuthor(author).SaveX(context.Background())
 
 	addr := startServer(t)
 
@@ -56,17 +58,11 @@ func TestGetBooks(t *testing.T) {
 	json.Unmarshal([]byte(string(body)), &books)
 
 	if len(books) != 2 {
-		t.Errorf("got: %d\nwont: %d", len(books), 2)
+		t.Fatalf("got: %d\nwont: %d", len(books), 2)
 	}
 
 	expected := "GoBook"
 	actual := books[0].Name
-	if actual != expected {
-		t.Errorf("got: %s\nwont: %s", actual, expected)
-	}
-
-	expected = "Sam"
-	actual = books[0].Author
 	if actual != expected {
 		t.Errorf("got: %s\nwont: %s", actual, expected)
 	}

@@ -1,0 +1,13 @@
+[test]
+dependencies = ["run_test"]
+
+[run_test]
+command = ["go", "test", "./..."]
+environments = ["DATABASE_URL=postgres://postgres:changeme@localhost:6432/go_api_example_test?sslmode=disable"]
+
+[setup]
+dependencies = ["run_migrater"]
+
+[run_migrater]
+command = ["go", "run", "cmd/migrater/main.go"]
+environments = ["DATABASE_URL=postgres://postgres:changeme@localhost:6432/go_api_example_test?sslmode=disable"]
