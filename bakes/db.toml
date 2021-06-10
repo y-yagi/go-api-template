@@ -19,4 +19,4 @@ environments = ["DATABASE_URL=postgres://postgres:changeme@localhost:6432/go_api
 
 [dump_schema]
 command = ["docker-compose", "exec", "-T", "db", "pg_dump", "-U", "postgres", "-w", "go_api_example", "--schema-only", "--no-privileges", "--no-owner"]
-stdout = "db/structure.sql"
+stdout = "database/structure.sql"
