@@ -22,6 +22,7 @@ func New() error {
 	}
 
 	drv := entsql.OpenDB(dialect.Postgres, db)
-	Client = ent.NewClient(ent.Driver(drv))
+	dbgDrv := dialect.Debug(drv)
+	Client = ent.NewClient(ent.Driver(dbgDrv))
 	return nil
 }
