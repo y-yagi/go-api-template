@@ -1,2 +1,6 @@
 go-api-template
 migrater
+
+
+/log/*
+!/log/.keep

@@ -2,6 +2,7 @@ package database
 
 import (
 	"database/sql"
+	"log"
 	"os"
 
 	"entgo.io/ent/dialect"
@@ -15,14 +16,14 @@ var (
 	Client *ent.Client
 )
 
-func New() error {
+func New(l *log.Logger) error {
 	db, err := sql.Open("pgx", os.Getenv("DATABASE_URL"))
 	if err != nil {
 		return err
 	}
 
 	drv := entsql.OpenDB(dialect.Postgres, db)
-	dbgDrv := dialect.Debug(drv)
+	dbgDrv := dialect.Debug(drv, l.Println)
 	Client = ent.NewClient(ent.Driver(dbgDrv))
 	return nil
 }
